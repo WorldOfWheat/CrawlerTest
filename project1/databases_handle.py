@@ -5,8 +5,8 @@ url = instances.url
 headers = instances.headers
 driver = instances.driver
 
-class databases_handler:
-    def __init__(self, databases_urls):
+class database_handler(threading.Thread):
+    def __init__(self, driver, database_link, department_id, result):
         # 變數 initial
         self.databases_urls = databases_urls
         self.question_links = []
@@ -39,19 +39,15 @@ class databases_handler:
             filtered_a_elements.append(a)
 
     
-    def get_all_question_link(self) -> None:
-        for database_url in self.databases_urls:
-            while True:
-                # 取得網頁
-                driver.get(f'{url}{database_url}')
-                source = driver.page_source 
-                 
-                # 如果沒有下一頁就跳出
-                if (not self._has_next_page(source)):
-                    break
+    # def run(self) -> None:
+    def run(self) -> None:
+        print(f'{url}{self.database_link}')
+        self.driver.get(f'{url}{self.database_link}')
+        while True:
+            sleep(2)
+            source = self.driver.page_source 
 
-                # 取得所有的 question link
-                self._get_all_question_a(source)
+            # 取得所有的 question link
 
             # 取得網頁原始碼
             web_source = driver.page_source
