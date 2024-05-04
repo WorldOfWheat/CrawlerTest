@@ -24,8 +24,6 @@ class department_handler:
             # 找到第一顆 “更多按鈕”
             more_a_button = soup.find('a', string='更多 >')
             self.database_links.append(more_a_button['href'])
-            break # TODO
 
-        print(self.database_links)
         return self.database_links
         

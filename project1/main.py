@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
-from databases_handle import databases_handler
 from department_handle import department_handler
 from time import sleep
+import databases_driver
 import instances
 import temp_handle as temp_handle
 import os
@@ -97,16 +97,12 @@ def main():
         break # TODO
 
     # 得科別 database link 得到 question link
-    print(department_section_database_links)
     question_links = {}
     for department_id in department_section_urls:
-        print(department_id)
-        question_links[department_id] = {}
-        for i in range(len(department_section_database_links[department_id])):
-            question_links[department_id][i] = databases_handler(department_section_database_links[department_id][i])
+        question_links = databases_driver.get_all_department_question_links(department_section_database_links)
+
         break # TODO
 
 if __name__ == '__main__':
-    print('test2.py is running...')
     main()
     end()
