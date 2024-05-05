@@ -1,90 +1,71 @@
-from bs4 import BeautifulSoup
+from database_handle import database_handler
 from department_handle import department_handler
-from time import sleep
-import databases_driver
-import temp_handle as temp_handle
-import os
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import configuration as conf
+import threading
 
-url = instances.url
-headers = instances.headers
-file_names = instances.file_names
-driver = instances.driver
+url = conf.url
+headers = conf.headers
 
-# 結束時的動作
-def end():
-    # 結束時將清空暫存檔，並刪除暫存檔
-    for key in file_names:
-        temp_handle.write(file_names[key], '')
-        os.remove(f'{temp_handle.temp_folder}/{file_names[key]}')
-    driver.quit()
+def wait_threads(threads: list[threading.Thread]):
+    for thread in threads:
+        thread.join()
 
-def section_a_filter(href: str) -> bool:
-    return href.find('sectionId') != -1
+def get_new_webdriver(added_options) -> webdriver:
+    options = webdriver.ChromeOptions()
+    for added_option in added_options:
+        options.add_argument(added_option)
+    new_driver = webdriver.Chrome(options=options)
+    return new_driver
 
-# 取得所有的 section 的 url
-# 使用前請先確保已經進入內科
-def get_sorted_department_section_urls() -> dict[str, list[dict[str, str]]]:
-    # 對 section_1_source 進行解析
-    source = temp_handle.read(file_names['section_1_source'])
-    soup = BeautifulSoup(source, 'html5lib')
-    # 找到所有的超連結
-    a_elements = soup.find_all('a')
-    # 過濾出所有的 section 的 a
-    filtered_a_elements = []
-    for a in a_elements:
-        if not a.has_attr('href'):
-            continue
-        if (not section_a_filter(a['href'])):
-            continue
-        filtered_a_elements.append(a)
-    filtered_a_elements = filtered_a_elements[0:-2]  # 最後兩個是不需要的 []
-
-    # 分類
-    sorted_a_elements = {}
-    department_counter = 0
-    for a in filtered_a_elements:
-        # 按 tbody id 分類 aka 部門 id
-        tbody = a.find_parent('tbody')
-        department_id = tbody['id']
-
-        if department_id not in sorted_a_elements:
-            sorted_a_elements[department_id] = []
-            department_counter = 0
-
-        sorted_a_elements[department_id].append({'href': a['href'], 'id': department_counter})
-        department_counter += 1
-
-    return sorted_a_elements
+driver = get_new_webdriver([headers['user-agent']])
 
 def main():
     # 進入網站
     driver.get(url)
 
+    department_handle = department_handler(driver)
     # 找到進入所有科別的 script，並執行
-    first_subject_script = get_first_subject_script()
-    driver.execute_script(first_subject_script)
-    sleep(0.5)
+    department_list_enter_script = department_handle.get_department_list_enter_script()
+    driver.execute_script(department_list_enter_script)
 
-    # 取得所有科別的網頁原始碼
-    web_source = driver.page_source
-    temp_handle.write(file_names['section_1_source'], web_source)
-    sleep(0.1)
+    # 等待科別總覽載入完成
+    wait = WebDriverWait(driver, 10)
+    wait.until(EC.url_contains('department_all'))
 
-    # 取得所有科別的 url
-    department_section_urls = get_sorted_department_section_urls()
-    department_section_database_links = {}
-    for department_id in department_section_urls:
-        department_handle = department_handler(department_section_urls[department_id])
-        department_section_database_links[department_id] = department_handle.get_all_database_link()
-        break # TODO
+    print("Getting all departments data")
+    all_departments = department_handle.get_all_department()
 
-    # 得科別 database link 得到 question link
-    question_links = {}
-    for department_id in department_section_urls:
-        question_links = databases_driver.get_all_department_question_links(department_section_database_links)
+    # 取得所有 department 的 section 的 database link
+    semaphore = threading.Semaphore(3)
+    lock = threading.Lock()
+    threads = []
+    for department in all_departments:
+        semaphore.acquire()
+        new_driver = get_new_webdriver([headers['user-agent']])
+        print(f'Getting {department.name} database links')
+        thread = threading.Thread(target=department_handler(new_driver).get_all_sections_database_link, args=(department, lock, semaphore))
+        thread.start()
+        threads.append(thread)
 
-        break # TODO
+    # 等待所有 thread 結束
+    wait_threads(threads)
+    
+    # 取得所有 department 的 section 的 Q&A
+    for department in all_departments:
+        semaphore.acquire()
+        new_driver = get_new_webdriver([headers['user-agent'], 'window-size=1400,900'])
+        print(f'Getting {department.name} Q&A')
+        for section in department.sections:
+            thread = threading.Thread(target=database_handler(new_driver).get_q_and_a, args=(section, lock, semaphore))
+            thread.start()
+            threads.append(thread)
+
+    # 等待所有 thread 結束
+    wait_threads(threads)
 
 if __name__ == '__main__':
     main()
-    end()

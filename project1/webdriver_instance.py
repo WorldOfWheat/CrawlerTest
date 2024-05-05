@@ -1,7 +1,7 @@
 from selenium import webdriver
-import defination
+import project1.configuration as configuration
 
-headers = defination.headers
+headers = configuration.headers
 
 opt = webdriver.ChromeOptions()
 opt = opt.add_argument(f'--user-agent={headers["user-agent"]}')

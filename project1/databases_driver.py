@@ -1,4 +1,4 @@
-from databases_handle import database_handler
+from project1.database_handle import database_handler
 from selenium import webdriver
 import threading
 import instances
