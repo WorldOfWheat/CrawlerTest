@@ -1,13 +1,13 @@
 from bs4 import BeautifulSoup
 from site_data import *
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from sql_handle import sql_handler
 import configuration
-import threading
 import requests
+import threading
 
 url = configuration.url
 headers = configuration.headers
@@ -17,38 +17,37 @@ class question_handler():
                 link: str
             ):
         self.link = link
+        self.source = requests.get(f'{url}{self.link}').text
     
-    def __remove_html_tag(self, text: str) -> str:
-        return BeautifulSoup(text, 'html5lib').text
-    
-    def __get_question(self, source) -> str:
-        soup = BeautifulSoup(source, 'html5lib')
+    # 取得問題
+    def __get_question(self) -> str:
+        soup = BeautifulSoup(self.source, 'html5lib')
         question_date = soup.find('p', class_='date')
         question_div = question_date.find_parent().find(text=True, recursive=False)
         question = question_div.text.strip()
         return question
     
-    def __get_answer(self, source) -> str:
-        soup = BeautifulSoup(source, 'html5lib')
+    # 取得答案
+    def __get_answer(self) -> str:
+        soup = BeautifulSoup(self.source, 'html5lib')
         thanks_button = soup.find('button', string='我要感謝')
         answer_div = thanks_button.findParent().find('textarea')
         answer = answer_div.text.strip().replace('<br>', '').replace('<br/>', '')
         return answer
     
+    # 取得 Q&A
     def get_q_and_a(self) -> q_and_a:
-        source = requests.get(f'{url}{self.link}').text
-        question = self.__get_question(source)
-        answer = self.__get_answer(source)
-        print(f'Question: {question}')
-        print(f'Answer: {answer}')
+        question = self.__get_question()
+        answer = self.__get_answer()
         new_q_and_a = q_and_a(question, answer)
         return new_q_and_a
 
 class database_handler():
     def __init__(self, 
-                driver: webdriver
+                driver: webdriver,
             ):
         self.driver = driver
+        self.sql = sql_handler()
 
     def __page_load_finish_check(self) -> None:
         # 等待「登入/註冊」按鈕出現
@@ -70,6 +69,7 @@ class database_handler():
         # 等待頁面載入完成
         wait = WebDriverWait(self.driver, 10)
         wait.until(EC.invisibility_of_element((By.ID, "loading")))
+        # self.sql.debug_print()
         return True
 
     # 判斷是否為 question a
@@ -113,6 +113,8 @@ class database_handler():
 
         self.driver.get(f'{url}{handle_section.database_link}')       
         self.__page_load_finish_check()
+
+        # 一頁一頁的找出所有的 Q&A
         while True:
             source = self.driver.page_source
             # 取得所有的 question link
@@ -121,14 +123,13 @@ class database_handler():
             question_links = self.__convert_question_a_to_link(a_elements)
             # 取得所有的 Q&A
             for question_link in question_links:
-                # 取得 Q&A
-                q_and_a = question_handler(question_link).get_q_and_a()
+                with lock:
+                    # 取得 Q&A
+                    q_and_a = question_handler(question_link).get_q_and_a()
+                    # 寫入資料
+                    self.sql.add_q_and_a(handle_section, q_and_a)
 
-                # 寫入資料
-                lock.acquire()
-                handle_section.q_and_a_list.append(q_and_a)
-                lock.release()
-
+            # 檢查有沒有下一頁，有的話就前往下一頁
             if (not self.__has_next_page(source)):
                 break
             self.__goto_next_page()

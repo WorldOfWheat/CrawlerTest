@@ -8,14 +8,15 @@ class q_and_a:
 
 class section:
     def __init__(self, 
+                id: str,
                 link: str,
                 print_name: str = None,
                 database_link: str = None
             ) -> None:
+        self.id = id
         self.link = link
         self.print_name = print_name
         self.database_link = database_link
-        self.q_and_a_list = []
 
 class department:
     def __init__(self, 
@@ -28,4 +29,4 @@ class department:
         if (sections == None):
             self.sections = []
         else:
-            self.sections = sections # type: list[section]    
+            self.sections = sections 

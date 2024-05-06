@@ -4,6 +4,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from sql_handle import sql_handler
 import configuration
 import threading
 
@@ -12,6 +13,7 @@ url = configuration.url
 class department_handler:
     def __init__(self, driver: webdriver):
         self.driver = driver
+        self.sql = sql_handler()
 
     # 等待網頁載入完成
     def __page_load_finish_check(self):        
@@ -44,8 +46,8 @@ class department_handler:
 
         return onclick_script
 
-    # 取得所有 department 的連結
-    def get_all_department(self) -> list[department]:
+    # 取得所有 department 和其 section 的連結
+    def get_all_departments_and_sections(self) -> list[department]:
         # 檢查是否已經進入科別總覽
         if (self.driver.current_url.find('department_all') == -1):
             raise Exception('Please enter department list first')
@@ -75,12 +77,15 @@ class department_handler:
             if (department_name == 'search-section-list'):
                 continue
 
+            # 取得 section_id
+            section_id = a.find_parent('tr')['id']
+            new_section = section(id=section_id, link=a['href'], print_name=a.text)
+            self.sql.add_section(new_section)
+
             # 將 section 加入 department_sections
             if (department_name not in department_sections):
                 department_sections[department_name] = []
-            department_sections[department_name].append(section(link=a['href'], print_name=a.text))
-
-            break #TODO
+            department_sections[department_name].append(new_section)
 
         # 對每個 section 做分類
         department_list = []
@@ -88,7 +93,6 @@ class department_handler:
             department_list.append(department(name=department_name, sections=department_sections[department_name]))
 
         return department_list
-        
 
     # 取得所有的 database link
     def get_all_sections_database_link(self, 
@@ -117,9 +121,8 @@ class department_handler:
                 more_a_element = soup.find('a',id='more-section-inquiry-href')
 
             # 寫入資料 
-            lock.acquire()
-            section.database_link = more_a_element['href']
-            lock.release()
+            with lock:
+                section.database_link = more_a_element['href']
 
         self.driver.quit()
         semaphore.release()
