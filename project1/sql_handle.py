@@ -17,7 +17,7 @@ class sql_handler():
 
         connection = sqlite3.connect(database_path)
         cursor = connection.cursor()
-        with open(f'{conf.sql_folder}/initial.sql', 'r') as sql_script:
+        with open(f'initial.sql', 'r') as sql_script:
             cursor.executescript(sql_script.read())
     
     # 增加 section
