@@ -42,10 +42,12 @@ def main():
     print("Getting all departments data")
     all_departments = department_handle.get_all_departments_and_sections()
 
-    # 取得所有 department 的 section 的 database link
-    semaphore = threading.Semaphore(3)
+    # 多執行緒處理
+    semaphore = threading.Semaphore(2)
     lock = threading.Lock()
     threads = []
+
+    # 取得所有 department 的 section 的 database link
     for department in all_departments:
         semaphore.acquire()
         new_driver = get_new_webdriver([headers['user-agent']])
@@ -58,11 +60,10 @@ def main():
     wait_threads(threads)
     
     # 取得所有 department 的 section 的 Q&A
-    semaphore = threading.Semaphore(3)
     for department in all_departments:
         for section in department.sections:
-            print(f'Getting {department.name} - {section.id} Q&A')
             semaphore.acquire()
+            print(f'Getting {department.name} - {section.id} Q&A')
             new_driver = get_new_webdriver([headers['user-agent'], 'window-size=1400,900'])
             thread = threading.Thread(target=database_handler(new_driver).get_q_and_a, args=(section, lock, semaphore))
             thread.start()
