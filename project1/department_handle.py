@@ -20,6 +20,7 @@ class department_handler:
         # 等待「登入/註冊」按鈕出現
         wait = WebDriverWait(self.driver, 10)
         wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'i.fas.fa-user.hidden-xs.hidden-sm')))
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.wrapper')))
 
     # 檢查 a 是否為 section
     def __section_a_filter(self, a: str) -> bool:
@@ -53,6 +54,7 @@ class department_handler:
             raise Exception('Please enter department list first')
 
         try:
+            # 等待網頁載入完成
             self.__page_load_finish_check()
         
             # 對科別總覽進行解析
@@ -64,6 +66,7 @@ class department_handler:
 
             # 找到所有的超連結
             a_elements = soup.find_all('a')
+            
             filtered_a_elements = []
             for a in a_elements:
                 try:
@@ -90,7 +93,8 @@ class department_handler:
                     department_sections[department_name].append(new_section)
                 except Exception as e:
                     raise(f'\t{a}\n{e}')
-                break
+
+                # break
 
             # 對每個 section 做分類
             department_list = []

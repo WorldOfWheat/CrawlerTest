@@ -53,6 +53,7 @@ class database_handler():
         # 等待「登入/註冊」按鈕出現
         wait = WebDriverWait(self.driver, 10)
         wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'i.fas.fa-user.hidden-xs.hidden-sm')))
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.wrapper')))
 
     # 判斷是否有下一頁
     def __has_next_page(self, source) -> bool:
@@ -106,6 +107,7 @@ class database_handler():
     # 取得所有 Q&A
     def get_q_and_a(self, 
                    handle_section: section,
+                   request_semaphore: threading.Semaphore,
                    lock: threading.Lock = threading.Lock(),
                    semaphore: threading.Semaphore = threading.Semaphore(1)
                 ) -> None:
@@ -126,7 +128,8 @@ class database_handler():
                         lock.acquire()
                         try:
                             # 取得 Q&A
-                            q_and_a = question_handler(question_link).get_q_and_a()
+                            with request_semaphore:
+                                q_and_a = question_handler(question_link).get_q_and_a()
                             # 寫入資料
                             self.sql.add_q_and_a(handle_section, q_and_a)
                         except Exception as e:
