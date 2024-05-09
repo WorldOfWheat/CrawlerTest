@@ -52,45 +52,53 @@ class department_handler:
         if (self.driver.current_url.find('department_all') == -1):
             raise Exception('Please enter department list first')
 
-        self.__page_load_finish_check()
+        try:
+            self.__page_load_finish_check()
         
-        # 對科別總覽進行解析
-        source = self.driver.page_source
-        soup = BeautifulSoup(source, 'html5lib')
+            # 對科別總覽進行解析
+            source = self.driver.page_source
+            soup = BeautifulSoup(source, 'html5lib')
 
-        # 對每個 section 做分類
-        department_sections = {}
+            # 對每個 section 做分類
+            department_sections = {}
 
-        # 找到所有的超連結
-        a_elements = soup.find_all('a')
-        filtered_a_elements = []
-        for a in a_elements:
-            # 過濾出所有的 section 的 a
-            if (not self.__section_a_filter(a)):
-                continue
-            filtered_a_elements.append(a)
+            # 找到所有的超連結
+            a_elements = soup.find_all('a')
+            filtered_a_elements = []
+            for a in a_elements:
+                try:
+                    # 過濾出所有的 section 的 a
+                    if (not self.__section_a_filter(a)):
+                        continue
+                    filtered_a_elements.append(a)
 
-            # 將 section 加入 department_sections
-            department_name = a.find_parent('tbody')['id']
+                    # 將 section 加入 department_sections
+                    department_name = a.find_parent('tbody')['id']
 
-            # 過濾掉 search-section-list
-            if (department_name == 'search-section-list'):
-                continue
+                    # 過濾掉 search-section-list
+                    if (department_name == 'search-section-list'):
+                        continue
 
-            # 取得 section_id
-            section_id = a.find_parent('tr')['id']
-            new_section = section(id=section_id, link=a['href'], print_name=a.text)
-            self.sql.add_section(new_section)
+                    # 取得 section_id
+                    section_id = a.find_parent('tr')['id']
+                    new_section = section(id=section_id, link=a['href'], print_name=a.text)
+                    self.sql.add_section(new_section)
 
-            # 將 section 加入 department_sections
-            if (department_name not in department_sections):
-                department_sections[department_name] = []
-            department_sections[department_name].append(new_section)
+                    # 將 section 加入 department_sections
+                    if (department_name not in department_sections):
+                        department_sections[department_name] = []
+                    department_sections[department_name].append(new_section)
+                except Exception as e:
+                    raise(f'\t{a}\n{e}')
+                break
 
-        # 對每個 section 做分類
-        department_list = []
-        for department_name in department_sections.keys():
-            department_list.append(department(name=department_name, sections=department_sections[department_name]))
+            # 對每個 section 做分類
+            department_list = []
+            for department_name in department_sections.keys():
+                department_list.append(department(name=department_name, sections=department_sections[department_name]))
+        
+        except Exception as e:
+            raise Exception(f'Getting all departments and sections Error\n{e}')
 
         return department_list
 
@@ -100,29 +108,37 @@ class department_handler:
                                        lock: threading.Lock = threading.Lock(),
                                        semaphore: threading.Semaphore = threading.Semaphore(1)
                                     ) -> None:
+        try:
+            for section in handle_department.sections:
+                try:
+                    self.driver.get(f'{url}{section.link}')
+                    self.__page_load_finish_check()
 
-        for section in handle_department.sections:
-            self.driver.get(f'{url}{section.link}')
-            self.__page_load_finish_check()
+                    # 取得網頁原始碼
+                    web_source = self.driver.page_source
+                    soup = BeautifulSoup(web_source, 'html5lib')
 
-            # 取得網頁原始碼
-            web_source = self.driver.page_source
-            soup = BeautifulSoup(web_source, 'html5lib')
+                    # 找到第一顆「更多」的 a
+                    more_a_element = soup.find('a',id='more-section-inquiry-href')
 
-            # 找到第一顆「更多」的 a
-            more_a_element = soup.find('a',id='more-section-inquiry-href')
+                    # 如果沒有 href，重新載入
+                    if (not more_a_element.has_attr('href')):
+                        self.driver.execute_script(f'location.reload()')
+                        self.__page_load_finish_check()
+                        web_source = self.driver.page_source
+                        soup = BeautifulSoup(web_source, 'html5lib')
+                        more_a_element = soup.find('a',id='more-section-inquiry-href')
 
-            # 如果沒有 href，重新載入
-            if (not more_a_element.has_attr('href')):
-                self.driver.execute_script(f'location.reload()')
-                self.__page_load_finish_check()
-                web_source = self.driver.page_source
-                soup = BeautifulSoup(web_source, 'html5lib')
-                more_a_element = soup.find('a',id='more-section-inquiry-href')
+                    # 寫入資料 
+                    with lock:
+                        section.database_link = more_a_element['href']
+                except Exception as e:
+                    raise Exception(f'\t{section.id}\n{e}')
+        except Exception as e:
+            print(f'Getting database links error')
+            print(f'\t{handle_department.name}')
+            print(f'{e}')
 
-            # 寫入資料 
-            with lock:
-                section.database_link = more_a_element['href']
-
-        self.driver.quit()
-        semaphore.release()
+        finally:
+            self.driver.quit()
+            semaphore.release()

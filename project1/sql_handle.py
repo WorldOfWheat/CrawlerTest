@@ -12,7 +12,8 @@ class sql_handler():
         database_path = f'{conf.sql_folder}/database.db'
 
         # 如果 database 不存在，則建立一個新的 database
-        with open(database_path, 'w+') as _:
+        with open(database_path, 'w') as f:
+            f.write('') #
             pass
 
         connection = sqlite3.connect(database_path)

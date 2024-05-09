@@ -64,12 +64,11 @@ class database_handler():
     # 前往下一頁
     def __goto_next_page(self) -> bool:
         # 按下一頁
-        next_a_element = self.driver.find_element(By.ID, 'page-next')
-        next_a_element.click()
+        next_a_element = WebDriverWait(self.driver, 10).until(EC.visibility_of_element_located((By.ID, 'page-next')))
+        self.driver.execute_script("arguments[0].click();", next_a_element)
         # 等待頁面載入完成
         wait = WebDriverWait(self.driver, 10)
         wait.until(EC.invisibility_of_element((By.ID, "loading")))
-        # self.sql.debug_print()
         return True
 
     # 判斷是否為 question a
@@ -110,29 +109,44 @@ class database_handler():
                    lock: threading.Lock = threading.Lock(),
                    semaphore: threading.Semaphore = threading.Semaphore(1)
                 ) -> None:
+        try:
+            self.driver.get(f'{url}{handle_section.database_link}')       
+            self.__page_load_finish_check()
 
-        self.driver.get(f'{url}{handle_section.database_link}')       
-        self.__page_load_finish_check()
+            # 一頁一頁的找出所有的 Q&A
+            while True:
+                try:
+                    source = self.driver.page_source
+                    # 取得所有的 question link
+                    a_elements = self.__get_all_question_a(source)
+                    # 將 question link 轉換成 link
+                    question_links = self.__convert_question_a_to_link(a_elements)
+                    # 取得所有的 Q&A
+                    for question_link in question_links:
+                        lock.acquire()
+                        try:
+                            # 取得 Q&A
+                            q_and_a = question_handler(question_link).get_q_and_a()
+                            # 寫入資料
+                            self.sql.add_q_and_a(handle_section, q_and_a)
+                        except Exception as e:
+                            raise Exception(f'\t{question_link}\n{e}')
+                        finally:
+                            lock.release()
 
-        # 一頁一頁的找出所有的 Q&A
-        while True:
-            source = self.driver.page_source
-            # 取得所有的 question link
-            a_elements = self.__get_all_question_a(source)
-            # 將 question link 轉換成 link
-            question_links = self.__convert_question_a_to_link(a_elements)
-            # 取得所有的 Q&A
-            for question_link in question_links:
-                with lock:
-                    # 取得 Q&A
-                    q_and_a = question_handler(question_link).get_q_and_a()
-                    # 寫入資料
-                    self.sql.add_q_and_a(handle_section, q_and_a)
-
-            # 檢查有沒有下一頁，有的話就前往下一頁
-            if (not self.__has_next_page(source)):
-                break
-            self.__goto_next_page()
-        
-        self.driver.quit()
-        semaphore.release()
+                    # 檢查有沒有下一頁，有的話就前往下一頁
+                    if (not self.__has_next_page(source)):
+                        break
+                    self.__goto_next_page()
+                except Exception as e:
+                    print('Getting Q&A page Error')
+                    print(f'\t{handle_section.id}')
+                    print(f'{e}')
+            
+        except Exception as e:
+            print(f'Getting all Q&A Error')
+            print(f'\t{handle_section.id}')
+            print(f'{e}')
+        finally:
+            self.driver.quit()
+            semaphore.release()

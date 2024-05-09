@@ -25,7 +25,7 @@ driver = get_new_webdriver([headers['user-agent']])
 
 def main():
     # 初始化 SQL 資料庫
-    sql_handler().initialize()   
+    sql_handler.initialize()   
 
     # 進入網站
     driver.get(url)
@@ -64,7 +64,7 @@ def main():
         for section in department.sections:
             semaphore.acquire()
             print(f'Getting {department.name} - {section.id} Q&A')
-            new_driver = get_new_webdriver([headers['user-agent'], 'window-size=1400,900'])
+            new_driver = get_new_webdriver([headers['user-agent'], 'window-size=1800,900'])
             thread = threading.Thread(target=database_handler(new_driver).get_q_and_a, args=(section, lock, semaphore))
             thread.start()
             threads.append(thread)
