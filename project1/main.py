@@ -1,9 +1,9 @@
 from database_handle import database_handler
 from department_handle import department_handler
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from sql_handle import sql_handler
 import configuration as conf
 import threading
 
@@ -24,6 +24,9 @@ def get_new_webdriver(added_options) -> webdriver:
 driver = get_new_webdriver([headers['user-agent']])
 
 def main():
+    # 初始化 SQL 資料庫
+    sql_handler.initialize()   
+
     # 進入網站
     driver.get(url)
 
@@ -37,12 +40,14 @@ def main():
     wait.until(EC.url_contains('department_all'))
 
     print("Getting all departments data")
-    all_departments = department_handle.get_all_department()
+    all_departments = department_handle.get_all_departments_and_sections()
 
-    # 取得所有 department 的 section 的 database link
-    semaphore = threading.Semaphore(3)
+    # 多執行緒處理
+    semaphore = threading.Semaphore(2)
     lock = threading.Lock()
     threads = []
+
+    # 取得所有 department 的 section 的 database link
     for department in all_departments:
         semaphore.acquire()
         new_driver = get_new_webdriver([headers['user-agent']])
@@ -54,13 +59,15 @@ def main():
     # 等待所有 thread 結束
     wait_threads(threads)
     
+    request_semaphore = threading.Semaphore(5)
+    sql_lock = threading.Lock()
     # 取得所有 department 的 section 的 Q&A
     for department in all_departments:
-        semaphore.acquire()
-        new_driver = get_new_webdriver([headers['user-agent'], 'window-size=1400,900'])
-        print(f'Getting {department.name} Q&A')
         for section in department.sections:
-            thread = threading.Thread(target=database_handler(new_driver).get_q_and_a, args=(section, lock, semaphore))
+            semaphore.acquire()
+            print(f'Getting {department.name} - {section.id} Q&A')
+            new_driver = get_new_webdriver([headers['user-agent'], 'window-size=1800,900']) 
+            thread = threading.Thread(target=database_handler(new_driver).get_q_and_a, args=(section, sql_lock, request_semaphore, semaphore))
             thread.start()
             threads.append(thread)
 
