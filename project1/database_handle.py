@@ -107,9 +107,9 @@ class database_handler():
     # 取得所有 Q&A
     def get_q_and_a(self, 
                    handle_section: section,
+                   sql_lock: threading.Lock,
                    request_semaphore: threading.Semaphore,
-                   lock: threading.Lock = threading.Lock(),
-                   semaphore: threading.Semaphore = threading.Semaphore(1)
+                   semaphore: threading.Semaphore
                 ) -> None:
         try:
             self.driver.get(f'{url}{handle_section.database_link}')       
@@ -125,31 +125,34 @@ class database_handler():
                     question_links = self.__convert_question_a_to_link(a_elements)
                     # 取得所有的 Q&A
                     for question_link in question_links:
-                        lock.acquire()
-                        try:
-                            # 取得 Q&A
-                            with request_semaphore:
+                        with request_semaphore:
+                            try:
+                                # 取得 Q&A
                                 q_and_a = question_handler(question_link).get_q_and_a()
-                            # 寫入資料
-                            self.sql.add_q_and_a(handle_section, q_and_a)
-                        except Exception as e:
-                            raise Exception(f'\t{question_link}\n{e}')
-                        finally:
-                            lock.release()
+                                # 寫入資料
+                                with sql_lock:
+                                    self.sql.add_q_and_a(handle_section, q_and_a)
+                            except Exception as e:
+                                print('Getting Q&A Error')
+                                print(f'\t{question_link}\n{e}')
+                                print(f'------------------------------')
 
-                    # 檢查有沒有下一頁，有的話就前往下一頁
-                    if (not self.__has_next_page(source)):
-                        break
-                    self.__goto_next_page()
                 except Exception as e:
                     print('Getting Q&A page Error')
                     print(f'\t{handle_section.id}')
                     print(f'{e}')
+                    print(f'------------------------------')
+                finally:
+                    # 檢查有沒有下一頁，有的話就前往下一頁
+                    if (not self.__has_next_page(source)):
+                        break
+                    self.__goto_next_page()
             
         except Exception as e:
             print(f'Getting all Q&A Error')
             print(f'\t{handle_section.id}')
             print(f'{e}')
+            print(f'------------------------------')
         finally:
             self.driver.quit()
             semaphore.release()
