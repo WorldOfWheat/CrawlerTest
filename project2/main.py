@@ -28,27 +28,26 @@ def main():
     # 初始化 SQL 資料庫
     sql_handler.initialize()   
 
+
     # 進入網站
     driver.get(url)
 
     panel_handle = panel_handler(driver)
     panel_handle.select_next_degree()
+    panel_handle.select_next_degree()
     panel_handle.select_next_department()
     while (panel_handle.has_next_degree()):
         panel_handle.select_next_degree()
         while (panel_handle.has_next_department()):
-            panel_handle.select_next_department()
             try:
+                panel_handle.select_next_department()
                 panel_handle.click_query_button()
-            except UnexpectedAlertPresentException:
-                WebDriverWait(driver, 3).until(EC.alert_is_present())
-                sleep(10)
-                panel_handle.accept_pop_out()
-            except TimeoutException:
-                continue
+                while (panel_handle.has_next_class()):
+                    panel_handle.select_next_class()
+                    print(panel_handle.get_class_name())
+                panel_handle.reset_class_counter()
             except Exception as e:
                 print(e)
-            sleep(1)
         panel_handle.reset_department_counter()
 
     sleep(5)
