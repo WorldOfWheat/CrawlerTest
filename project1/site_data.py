@@ -10,8 +10,8 @@ class section:
     def __init__(self, 
                 id: str,
                 link: str,
-                print_name: str = None,
-                database_link: str = None
+                print_name: str,
+                database_link: str = None,
             ) -> None:
         self.id = id
         self.link = link
@@ -20,11 +20,11 @@ class section:
 
 class department:
     def __init__(self, 
-                name: str, 
+                id: str, 
                 print_name: str = None,
                 sections: list[section] = None
             ) -> None:
-        self.name = name
+        self.id = id
         self.print_name = print_name
         if (sections == None):
             self.sections = []

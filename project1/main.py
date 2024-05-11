@@ -40,6 +40,8 @@ def main():
     wait.until(EC.url_contains('department_all'))
 
     print("Getting all departments data")
+    print(f'------------------------------')
+    
     all_departments = department_handle.get_all_departments_and_sections()
 
     # 多執行緒處理
@@ -51,7 +53,7 @@ def main():
     for department in all_departments:
         semaphore.acquire()
         new_driver = get_new_webdriver([headers['user-agent']])
-        print(f'Getting {department.name} database links')
+        print(f'Getting {department.id} database links')
         thread = threading.Thread(target=department_handler(new_driver).get_all_sections_database_link, args=(department, lock, semaphore))
         thread.start()
         threads.append(thread)
@@ -59,13 +61,14 @@ def main():
     # 等待所有 thread 結束
     wait_threads(threads)
     
-    request_semaphore = threading.Semaphore(5)
+    request_semaphore = threading.Semaphore(10)
     sql_lock = threading.Lock()
     # 取得所有 department 的 section 的 Q&A
     for department in all_departments:
         for section in department.sections:
             semaphore.acquire()
-            print(f'Getting {department.name} - {section.id} Q&A')
+            
+            print(f'Getting {department.id} - {section.id} Q&A')
             new_driver = get_new_webdriver([headers['user-agent'], 'window-size=1800,900']) 
             thread = threading.Thread(target=database_handler(new_driver).get_q_and_a, args=(section, sql_lock, request_semaphore, semaphore))
             thread.start()

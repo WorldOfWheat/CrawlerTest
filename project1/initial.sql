@@ -1,13 +1,23 @@
+DROP TABLE IF EXISTS `departments`;
 DROP TABLE IF EXISTS `sections`;
 DROP TABLE IF EXISTS `q_and_a_pairs`;
 
+CREATE TABLE IF NOT EXISTS `departments` (
+    `department_id` TEXT,
+    `print_name` TEXT NOT NULL,
+  	PRIMARY KEY (`department_id`)
+);
+
 CREATE TABLE IF NOT EXISTS `sections` (
-    section_id TEXT PRIMARY KEY
+    `section_id` TEXT,
+    `print_name` TEXT NOT NULL,
+    `department_id` TEXT NOT NULL,
+  	PRIMARY KEY (`section_id`)
 );
 
 CREATE TABLE IF NOT EXISTS `q_and_a_pairs` (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-    section_id TEXT FORIEGN KEY REFERENCES sections(section_id),
-    question TEXT NOT NULL, 
-    answer TEXT NOT NULL
+    `id` INTEGER PRIMARY KEY AUTOINCREMENT, 
+    `question` TEXT NOT NULL, 
+    `answer` TEXT NOT NULL,
+    `section_id` TEXT NOT NULL
 );

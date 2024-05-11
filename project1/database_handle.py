@@ -58,14 +58,18 @@ class database_handler():
     # 判斷是否有下一頁
     def __has_next_page(self, source) -> bool:
         soup = BeautifulSoup(source, 'html5lib')
-        next_symbol = soup.find('i', class_=['fa', 'fa-angle-right'])
-        next_a_element = next_symbol.find_parent()
-        return next_a_element.has_attr('id')
+        next_symbol = soup.find('i', class_='fas fa-angle-right')
+        next_li_element = next_symbol.find_parent('li')
+        if not next_li_element.has_attr('class'):
+            return True
+        return not ('disabled' in next_li_element['class'])
     
     # 前往下一頁
     def __goto_next_page(self) -> bool:
-        # 按下一頁
+        # 等待下一頁出現
         next_a_element = WebDriverWait(self.driver, 10).until(EC.visibility_of_element_located((By.ID, 'page-next')))
+
+        # 按下一頁
         self.driver.execute_script("arguments[0].click();", next_a_element)
         # 等待頁面載入完成
         wait = WebDriverWait(self.driver, 10)
