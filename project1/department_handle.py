@@ -42,7 +42,6 @@ class department_handler:
             new_department = department(id=department_id, print_name=a.text)
             departments.append(new_department)
         
-        return [department(id='SUG', print_name='內科')]
         return departments
 
     # 取得所有的 section
