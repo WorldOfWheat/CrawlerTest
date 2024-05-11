@@ -30,6 +30,3 @@ class department:
             self.sections = []
         else:
             self.sections = sections 
-    
-    def __str__(self) -> str:
-        return f'{self.id} - {self.print_name}'

@@ -41,6 +41,7 @@ def main():
 
     print("Getting all departments data")
     print(f'------------------------------')
+    
     all_departments = department_handle.get_all_departments_and_sections()
 
     # 多執行緒處理
@@ -66,6 +67,7 @@ def main():
     for department in all_departments:
         for section in department.sections:
             semaphore.acquire()
+            
             print(f'Getting {department.id} - {section.id} Q&A')
             new_driver = get_new_webdriver([headers['user-agent'], 'window-size=1800,900']) 
             thread = threading.Thread(target=database_handler(new_driver).get_q_and_a, args=(section, sql_lock, request_semaphore, semaphore))

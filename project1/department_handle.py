@@ -82,7 +82,6 @@ class department_handler:
 
         return onclick_script
 
-
     # 取得所有 department 和其 section 的連結
     def get_all_departments_and_sections(self) -> list[department]:
         # 檢查是否已經進入科別總覽
