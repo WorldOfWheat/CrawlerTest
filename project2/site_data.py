@@ -3,6 +3,9 @@ class teacher:
                 name: str, 
             ) -> None:
         self.name = name
+    
+    def __str__(self) -> str:
+        return self.name
 
 class subject_time:
     def __init__(self,

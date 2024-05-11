@@ -4,7 +4,8 @@ DROP TABLE IF EXISTS `subject_times`;
 DROP TABLE IF EXISTS `site_class_tables`;
 
 CREATE TABLE IF NOT EXISTS `teachers` (
-    `name` TEXT PRIMARY KEY
+    `name` TEXT,
+    PRIMARY KEY (`name`)
 );
 
 CREATE TABLE IF NOT EXISTS `subjects` (

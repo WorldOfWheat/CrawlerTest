@@ -26,3 +26,10 @@ class sql_handler():
             cursor.executescript(sql_script.read())
         cursor.connection.commit()
         cursor.close()
+
+    # 插入教師
+    def insert_teacher(self, teacher: teacher) -> None:
+        cursor = self.connection.cursor()
+        cursor.execute('INSERT INTO teacher (name) VALUES (?)', (teacher.name,))
+        cursor.connection.commit()
+        cursor.close()

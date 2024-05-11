@@ -1,3 +1,4 @@
+from class_handle import class_handler
 from panel_handle import panel_handler
 from selenium import webdriver
 from selenium.common.exceptions import UnexpectedAlertPresentException, TimeoutException
@@ -32,8 +33,8 @@ def main():
     # 進入網站
     driver.get(url)
 
+    class_handle = class_handler(driver)
     panel_handle = panel_handler(driver)
-    panel_handle.select_next_degree()
     panel_handle.select_next_degree()
     panel_handle.select_next_department()
     while (panel_handle.has_next_degree()):
@@ -44,9 +45,10 @@ def main():
                 panel_handle.click_query_button()
                 while (panel_handle.has_next_class()):
                     panel_handle.select_next_class()
-                    print(panel_handle.get_class_name())
+                    class_handle.get_teachers()
                 panel_handle.reset_class_counter()
             except Exception as e:
+                print(f'\t{panel_handle.get_class_name()}')
                 print(e)
         panel_handle.reset_department_counter()
 
