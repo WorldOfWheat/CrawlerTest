@@ -27,28 +27,34 @@ class sql_handler():
         cursor.connection.commit()
         cursor.close()
     
+    # 增加 department
+    def add_department(self, 
+                       added_department: department
+                    ) -> None:
+        cursor = self.connection.cursor()
+        cursor.execute('INSERT INTO departments (department_id, print_name) VALUES (?,?)', (added_department.id, added_department.print_name))
+        cursor.connection.commit()
+        cursor.close()
+    
     # 增加 section
     def add_section(self, 
-                   added_section: section
+                   added_section_department: department,
+                   added_section: section,
                 ) -> None:
         cursor = self.connection.cursor()
-        cursor.execute('INSERT INTO sections (section_id) VALUES (?)', (added_section.id,))
+        cursor.execute('INSERT INTO sections (section_id, print_name, department_id) VALUES (?,?,?)', 
+                       (added_section.id, added_section.print_name, added_section_department.id))
         cursor.connection.commit()
         cursor.close()
     
     # 增加新的 Q&A
     def add_q_and_a(self,
-                     q_and_a_section: section,
+                     added_q_and_a_section: section,
                      added_q_and_a: q_and_a
                  ) -> None:
         cursor = self.connection.cursor()
-        cursor.execute('INSERT INTO q_and_a_pairs (section_id,question,answer) VALUES (?, ?, ?)', (q_and_a_section.id, added_q_and_a.question, added_q_and_a.answer))
+        cursor.execute('INSERT INTO q_and_a_pairs (question,answer,section_id) VALUES (?, ?, ?)', 
+                       (added_q_and_a.question, added_q_and_a.answer, added_q_and_a_section.id))
         cursor.connection.commit()
         cursor.close()
     
-    def debug_print(self) -> None:
-        cursor = self.connection.cursor()
-        cursor.execute('SELECT * FROM q_and_a_pairs')
-        print(cursor.fetchall())
-        cursor.connection.commit()
-        cursor.close()
