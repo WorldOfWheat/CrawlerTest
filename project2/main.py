@@ -1,8 +1,7 @@
 from class_handle import class_handler
 from panel_handle import panel_handler
 from selenium import webdriver
-from selenium.common.exceptions import UnexpectedAlertPresentException, TimeoutException
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support import expected_conditions as EC
 from sql_handle import sql_handler
 from time import sleep
@@ -12,15 +11,21 @@ import threading
 url = conf.url
 headers = conf.headers
 
+# 等待所有執行緒結束
 def wait_threads(threads: list[threading.Thread]):
     for thread in threads:
         thread.join()
 
+# 取得新的 webdriver
 def get_new_webdriver(added_options) -> webdriver:
     options = webdriver.ChromeOptions()
+    options.binary_location = 'chrome-linux64/chrome'
     for added_option in added_options:
         options.add_argument(added_option)
-    new_driver = webdriver.Chrome(options=options)
+    
+    service = Service('chromedriver-linux64/chromedriver')
+    new_driver = webdriver.Chrome(service=service, options=options)
+
     return new_driver
 
 driver = get_new_webdriver([headers['user-agent']])
@@ -28,7 +33,6 @@ driver = get_new_webdriver([headers['user-agent']])
 def main():
     # 初始化 SQL 資料庫
     sql_handler.initialize()   
-
 
     # 進入網站
     driver.get(url)
@@ -52,6 +56,7 @@ def main():
                 print(e)
         panel_handle.reset_department_counter()
 
+    driver.quit()
     sleep(5)
 
 

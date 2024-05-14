@@ -41,20 +41,24 @@ class class_handler:
         new_teacher = teacher(teacher_name)
         return [new_teacher]
 
+    # 是否為多頁
     def __is_multi_page(self, row) -> bool:
         cells = row.find_all('td')
         return cells[0].text == '1'
     
-    def __goto_next_page(self, page_select_row):
-        # TODO
-        next_page_a = page_select_row.find('span').find_parent('td').find_next_sibling().find('a')
-        next_page_a_element = WebDriverWait(self.driver, 10).until(EC.visibility_of_element_located((By.XPATH, f"//a[@href ='{next_page_a['href']}']")))
+    # 前往下一頁
+    def __goto_next_page(self, next_page_number):
+        next_page_a_element = self.driver.find_element(By.XPATH, f'//a[text()="{next_page_number}"]')
         self.driver.execute_script("arguments[0].click();", next_page_a_element)
     
-    def __has_next_page(self, page_select_row) -> bool:
-        next_page_a = page_select_row.find('span').find_parent('td').find_next_sibling().find('a')
-        return next_page_a != None
+    # 是否有下一頁
+    def __has_next_page(self, page_select_row, next_page_number) -> bool:
+        page_select_span = page_select_row.find('a', text=f'{next_page_number}')
+        if (page_select_span == None):
+            return False
+        return True
     
+    # 是否有課程表
     def has_class_table(self):
         source = self.driver.page_source
         soup = BeautifulSoup(source, 'html.parser')
@@ -72,24 +76,22 @@ class class_handler:
         teachers = []
 
         if (self.__is_multi_page(rows[-1])):
+            next_page_number = 2
             while True:
                 for row in rows[0:-2]:
                     teachers.extend(self.__get_teacher_name(row))
-                print(list(map(str, teachers)))
                 
                 page_select_row = rows[-1]
 
                 # 沒有下一頁
-                print(page_select_row)
-                if (not self.__has_next_page(page_select_row)):
+                if (not self.__has_next_page(page_select_row, next_page_number)):
                     break
-                print(page_select_row)
 
-                print('next page')
-                self.__goto_next_page(page_select_row)
-                sleep(10)
+                self.__goto_next_page(next_page_number)
+                next_page_number += 1
                 rows = self.__get_class_table_rows()
                 rows.remove(rows[0])
+            print(list(map(str, teachers)))
             return teachers
 
         for row in rows:
