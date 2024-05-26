@@ -142,7 +142,8 @@ class department_handler:
                     with lock:
                         section.database_link = more_a_element['href']
                 except Exception as e:
-                    raise Exception(f'\t{section.id}\n{e}')
+                    print(f'Getting database link error')
+                    print(f'\t{section.id}\n{e}')
 
         except Exception as e:
             print(f'Getting database links error')

@@ -1,2 +1,4 @@
 **/__pycache__
-**/python-env
+**/.venv
+**/chromedriver-linux64
+**/chrome-linux64

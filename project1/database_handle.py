@@ -23,7 +23,8 @@ class question_handler():
     def __get_question(self) -> str:
         soup = BeautifulSoup(self.source, 'html5lib')
         question_date = soup.find('p', class_='date')
-        question_div = question_date.find_parent().find(text=True, recursive=False)
+        # question_div = question_date.find_parent().find(text=True, recursive=False)
+        question_div = question_date.find_parent()#.find(text=True, recursive=False)
         question = question_div.text.strip()
         return question
     
